@@ -16,6 +16,7 @@
 #define SRC_CPP_SORT_ON_DISK_HPP_
 
 #define BUF_SIZE 262144
+static uint8_t const zero_pattern[128 * 1024 * 1024] = {0};
 
 #include <vector>
 #include <iostream>
@@ -56,11 +57,7 @@ class SortOnDiskUtils {
             return (left_arr[start_byte] & mask) - (right_arr[start_byte] & mask);
         }
 
-        for (uint32_t i = start_byte + 1; i < len; i++) {
-            if (left_arr[i] != right_arr[i])
-                return left_arr[i] - right_arr[i];
-        }
-        return 0;
+        return memcmp(&left_arr[start_byte + 1], &right_arr[start_byte + 1], len-1);
     }
 
     // The number of memory entries required to do the custom SortInMemory algorithm, given the total number of entries to be sorted.
@@ -73,7 +70,16 @@ class SortOnDiskUtils {
     }
 
     inline static bool IsPositionEmpty(uint8_t* memory, uint32_t entry_len) {
-        for (uint32_t i = 0; i < entry_len; i++)
+        uint32_t zero_pattern_len = sizeof(zero_pattern)/sizeof(uint8_t);
+        if ( entry_len <= zero_pattern_len)
+        {
+            return 0 == memcmp(memory, zero_pattern, entry_len);
+        }
+        if (memcmp(memory, zero_pattern, zero_pattern_len) != 0)
+        {
+            return false;
+        }
+        for (uint32_t i = zero_pattern_len; i < entry_len; i++)
             if (memory[i] != 0)
                 return false;
         return true;
