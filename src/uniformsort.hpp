@@ -27,11 +27,12 @@
 namespace UniformSort {
 
     inline int64_t const BUF_SIZE = 262144;
-    const uint8_t zero_pattern[8 * 1024 * 1024] = {0};
+    inline int64_t const ZERO_PATTERN_SIZE = 8 * 1024 * 1024;
+    const uint8_t zero_pattern[ZERO_PATTERN_SIZE] = {0};
 
     inline static bool IsPositionEmpty(const uint8_t *memory, uint32_t const entry_len)
     {
-        if (entry_len < sizeof(zero_pattern) / sizeof(zero_pattern[0])) {
+        if (entry_len < ZERO_PATTERN_SIZE) {
             return 0 == memcmp(memory, zero_pattern, entry_len);
         }
         for (uint32_t i = 0; i < entry_len; i++)
@@ -59,7 +60,6 @@ namespace UniformSort {
         uint64_t read_pos = input_disk_begin;
         uint64_t buf_size = 0;
         uint64_t buf_ptr = 0;
-        uint64_t swaps = 0;
         for (uint64_t i = 0; i < num_entries; i++) {
             if (buf_size == 0) {
                 // If read buffer is empty, read from disk and refill it.
@@ -82,7 +82,6 @@ namespace UniformSort {
                     memcpy(swap_space.get(), memory + pos, entry_len);
                     memcpy(memory + pos, buffer.get() + buf_ptr, entry_len);
                     memcpy(buffer.get() + buf_ptr, swap_space.get(), entry_len);
-                    swaps++;
                 }
                 pos += entry_len;
             }

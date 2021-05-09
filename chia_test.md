@@ -77,3 +77,17 @@
 | 27 | 16 | 2048 | 370                         |     |         |     |         |                    |
 | 28 | 16 | 2048 | 748/764/756                 |     |         |     |         |                    |
 | 28 | 16 | 4096 | 784/743/764                 |     |         |     |         |                    |
+
+
+## 总结
+1. P 图的临时文件和最终的 Plot 文件最好不要跨目录
+   ```
+    Final File size: 0.033 GiB
+    Total time = 23.475 seconds. CPU (131.090%) Sat May  8 12:07:44 2021
+    Copied final file from "./plot.dat.2.tmp" to "./plot.r/plot.dat.2.tmp"
+    Copy time = 0.018 seconds. CPU (100.250%) Sat May  8 12:07:44 2021
+    Removed temp2 file "./plot.dat.2.tmp"? 1
+    Renamed final file from "./plot.r/plot.dat.2.tmp" to "./plot.r/plot.dat"
+   ```
+2. 相对比较好的参数（-r 16 -b 128 -b 3096）默认内存 4608 一般用不到，另外增加了 bucket 的数量，对内存的占用也会相对减少
+3. chia 有讨论是否放宽对 bucket 的上线限制(默认 128)增加到 1024
