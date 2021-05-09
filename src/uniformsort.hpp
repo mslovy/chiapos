@@ -75,7 +75,7 @@ namespace UniformSort {
                 Util::ExtractNum(buffer.get() + buf_ptr, entry_len, bits_begin, bucket_length) *
                 entry_len;
             // As long as position is occupied by a previous entry...
-            while (!IsPositionEmpty(memory + pos, entry_len) && pos < memory_len) {
+            while (pos < memory_len && !IsPositionEmpty(memory + pos, entry_len)) {
                 // ...store there the minimum between the two and continue to push the higher one.
                 if (Util::MemCmpBits(
                         memory + pos, buffer.get() + buf_ptr, entry_len, bits_begin) > 0) {
@@ -96,10 +96,12 @@ namespace UniformSort {
             if (!IsPositionEmpty(memory + pos, entry_len)) {
                 // We've found an entry.
                 // write the stored entry itself.
-                memcpy(
+                if (pos != entries_written){
+                    memcpy(
                     memory + entries_written * entry_len,
                     memory + pos,
                     entry_len);
+                }
                 entries_written++;
             }
         }
