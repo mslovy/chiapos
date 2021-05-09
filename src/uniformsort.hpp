@@ -32,7 +32,7 @@ namespace UniformSort {
 
     inline static bool IsPositionEmpty(const uint8_t *memory, uint32_t const entry_len)
     {
-        if (entry_len < ZERO_PATTERN_SIZE) {
+        if (entry_len <= ZERO_PATTERN_SIZE) {
             return 0 == memcmp(memory, zero_pattern, entry_len);
         }
         for (uint32_t i = 0; i < entry_len; i++)
