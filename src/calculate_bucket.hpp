@@ -21,7 +21,6 @@
 #include <array>
 #include <bitset>
 #include <iostream>
-#include <map>
 #include <utility>
 #include <vector>
 
@@ -306,12 +305,14 @@ public:
             uint64_t r = bucket_L[pos_L].y - remove_y;
             for (uint8_t i = 0; i < kExtraBitsPow; i++) {
                 uint16_t r_target = L_targets[parity][r][i];
-                for (size_t j = 0; j < rmap[r_target].count; j++) {
-                    if(idx_L != nullptr) {
+                if(idx_L != nullptr) {
+                    for (size_t j = 0; j < rmap[r_target].count; j++) {
                         idx_L[idx_count]=pos_L;
                         idx_R[idx_count]=rmap[r_target].pos + j;
                     }
                     idx_count++;
+                }else{
+                    idx_count += rmap[r_target].count;
                 }
             }
         }
