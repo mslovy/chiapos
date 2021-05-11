@@ -25,6 +25,7 @@
 
 #ifndef _WIN32
 #include <sys/mman.h>
+#define USE_MMAP
 #endif
 
 // enables disk I/O logging to disk.log
@@ -122,11 +123,18 @@ struct FileDisk {
 
     #ifdef USE_MMAP
             // mmap
-            if (flags & writeFlag == 0) {
+            if (map_ == nullptr) {
                 ::fseek(f_, 0L, SEEK_END);
                 map_length_ = ::ftell(f_);
                 ::fseek(f_, 0L, SEEK_SET);
-                map_ = (char *) mmap(NULL, map_length_, PROT_READ, MAP_PRIVATE, ::fileno(f_), 0);
+                if (map_length_) {
+                    if ((map_ = (char *)mmap(NULL, map_length_, PROT_READ, MAP_PRIVATE, ::fileno(f_), 0)) == MAP_FAILED) {
+                        std::cout << "\tmap failed,  errno " << errno << std::endl;
+                        map_ = nullptr;
+                    } else {
+                        std::cout << "\tmap file " << filename_.c_str() << "length " << map_length_ << std::endl;
+                    }
+                }
             }
     #endif
 #endif
@@ -160,13 +168,9 @@ struct FileDisk {
     #ifndef _WIN32
     #ifdef USE_MMAP
         if (map_) {
-            int rv = munmap(map_, map_length_)
-            if (rv != 0)
-                printf("====> Close %s\n, munmap failed\n", filename_.c_str(), map_length_);
+            if (munmap(map_, map_length_) != 0)
+                std::cout << "munmap failed, file " << filename_.c_str() << std::endl;
         }
-        ::fseek(f_, 0L, SEEK_END);
-        int sz = ::ftell(f_);
-        // printf("====> Close %s\n, size = %d\n", filename_.c_str(), sz);
     #endif
     #endif
 
@@ -184,6 +188,16 @@ struct FileDisk {
 #if ENABLE_LOGGING
         disk_log(filename_, op_t::read, begin, length);
 #endif
+
+    #ifndef _WIN32
+    #ifdef USE_MMAP
+        if (map_ != nullptr) {
+            memcpy(memcache, map_ + begin, length);
+            return ;
+        } 
+    #endif
+    #endif
+
         // Seek, read, and replace into memcache
         uint64_t amtread;
         do {
@@ -197,14 +211,7 @@ struct FileDisk {
 #endif
                 bReading = true;
             }
-    #ifndef _WIN32
-    #ifdef USE_MMAP
-            if (map_ != nullptr) {
-                memcpy(reinterpret_cast<char *>(memcache), map_ + begin, length);
-                amtread = length;
-            } else
-    #endif
-    #endif
+    
             amtread = ::fread(reinterpret_cast<char *>(memcache), sizeof(uint8_t), length, f_);
             readPos = begin + amtread;
             if (amtread != length) {
@@ -269,6 +276,13 @@ struct FileDisk {
         fs::resize_file(filename_, new_size);
     }
 
+#ifndef _WIN32
+#ifdef USE_MMAP
+    char *map_ = nullptr;
+    size_t map_length_;
+#endif
+#endif
+
 private:
 
     uint64_t readPos = 0;
@@ -279,10 +293,6 @@ private:
     fs::path filename_;
     FILE *f_ = nullptr;
 
-#ifdef USE_MMAP
-    char *map_ = nullptr;
-    size_t map_length_;
-#endif
 
     static const uint8_t writeFlag = 0b01;
     static const uint8_t retryOpenFlag = 0b10;
@@ -294,6 +304,18 @@ struct BufferedDisk : Disk
 
     uint8_t const* Read(uint64_t begin, uint64_t length) override
     {
+#ifndef _WIN32
+#ifdef USE_MMAP
+        if (disk_->map_ == nullptr)
+            disk_->Open(0b10); // retryOpenFlag
+        
+        if (disk_->map_)
+            return (uint8_t const*) disk_->map_ + begin;
+        else
+            std::cout << "\tread in buffer" << std::endl;
+#endif
+#endif
+
         assert(length < read_ahead);
         NeedReadCache();
         // all allocations need 7 bytes head-room, since
