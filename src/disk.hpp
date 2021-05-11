@@ -23,6 +23,10 @@
 #include <thread>
 #include <chrono>
 
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+
 // enables disk I/O logging to disk.log
 // use tools/disk.gnuplot to generate a plot
 #define ENABLE_LOGGING 0
@@ -115,6 +119,16 @@ struct FileDisk {
             f_ = ::_wfopen(filename_.c_str(), (flags & writeFlag) ? L"w+b" : L"r+b");
 #else
             f_ = ::fopen(filename_.c_str(), (flags & writeFlag) ? "w+b" : "r+b");
+
+    #ifdef USE_MMAP
+            // mmap
+            if (flags & writeFlag == 0) {
+                ::fseek(f_, 0L, SEEK_END);
+                map_length_ = ::ftell(f_);
+                ::fseek(f_, 0L, SEEK_SET);
+                map_ = (char *) mmap(NULL, map_length_, PROT_READ, MAP_PRIVATE, ::fileno(f_), 0);
+            }
+    #endif
 #endif
             if (f_ == nullptr) {
                 std::string error_message =
@@ -142,6 +156,20 @@ struct FileDisk {
     void Close()
     {
         if (f_ == nullptr) return;
+
+    #ifndef _WIN32
+    #ifdef USE_MMAP
+        if (map_) {
+            int rv = munmap(map_, map_length_)
+            if (rv != 0)
+                printf("====> Close %s\n, munmap failed\n", filename_.c_str(), map_length_);
+        }
+        ::fseek(f_, 0L, SEEK_END);
+        int sz = ::ftell(f_);
+        // printf("====> Close %s\n, size = %d\n", filename_.c_str(), sz);
+    #endif
+    #endif
+
         ::fclose(f_);
         f_ = nullptr;
         readPos = 0;
@@ -169,6 +197,14 @@ struct FileDisk {
 #endif
                 bReading = true;
             }
+    #ifndef _WIN32
+    #ifdef USE_MMAP
+            if (map_ != nullptr) {
+                memcpy(reinterpret_cast<char *>(memcache), map_ + begin, length);
+                amtread = length;
+            } else
+    #endif
+    #endif
             amtread = ::fread(reinterpret_cast<char *>(memcache), sizeof(uint8_t), length, f_);
             readPos = begin + amtread;
             if (amtread != length) {
@@ -242,6 +278,11 @@ private:
 
     fs::path filename_;
     FILE *f_ = nullptr;
+
+#ifdef USE_MMAP
+    char *map_ = nullptr;
+    size_t map_length_;
+#endif
 
     static const uint8_t writeFlag = 0b01;
     static const uint8_t retryOpenFlag = 0b10;
