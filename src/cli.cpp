@@ -67,6 +67,11 @@ int main(int argc, char *argv[]) try {
     options.positional_help("(create/prove/verify/check) param1 param2 ")
         .show_positional_help();
 
+    std::cout << std::endl << std::endl;
+    std::cout << "####################################" << std::endl;
+    std::cout << "######## POWERED BY QEEQEZ #########" << std::endl;
+    std::cout << "####################################" << std::endl << std::endl;
+    
     // Default values
     uint8_t k = 20;
     uint32_t num_buckets = 0;
