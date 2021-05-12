@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #include <ctime>
-#include <set>
-
 #include "cxxopts.hpp"
 #include "../lib/include/picosha2.hpp"
 #include "plotter_disk.hpp"
